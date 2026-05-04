@@ -50,6 +50,8 @@ class AppStrings {
   final String saveEvaluation;
   final String savedSuccessfully;
   final String completedCount;
+  final String weeklyTaskProgressTemplate;
+  final String monthlyTaskProgressTemplate;
   final String actualCount;
   final String positivePoints;
   final String negativePoints;
@@ -68,10 +70,23 @@ class AppStrings {
   final String selectTasksAndForbidden;
   final String dailyScores;
   final String selectedItems;
+  final String categoryStatistics;
+  final String selectCategories;
+  final String noCategorySelected;
+  final String noCategoryData;
   final String noData;
   final String chooseValidDate;
   final String noActiveItems;
+  final String noCategoriesYet;
+  final String noCategoriesWithTasksAvailable;
+  final String noItemsInCategory;
+  final String addCategory;
+  final String categoryName;
+  final String categoryNameExists;
   final String settings;
+  final String language;
+  final String englishLanguage;
+  final String arabicLanguage;
   final String userGuide;
   final String userGuideSubtitle;
   final String userGuideNotAvailable;
@@ -87,6 +102,12 @@ class AppStrings {
   final String confirmImport;
   final String importReplaceConfirmation;
   final String continueAction;
+  final String developerTools;
+  final String clearLocalData;
+  final String clearLocalDataDescription;
+  final String clearLocalDataConfirmation;
+  final String clearNow;
+  final String localDataClearedRestartHint;
 
   const AppStrings({
     required this.appName,
@@ -126,6 +147,8 @@ class AppStrings {
     required this.saveEvaluation,
     required this.savedSuccessfully,
     required this.completedCount,
+    required this.weeklyTaskProgressTemplate,
+    required this.monthlyTaskProgressTemplate,
     required this.actualCount,
     required this.positivePoints,
     required this.negativePoints,
@@ -144,10 +167,23 @@ class AppStrings {
     required this.selectTasksAndForbidden,
     required this.dailyScores,
     required this.selectedItems,
+    required this.categoryStatistics,
+    required this.selectCategories,
+    required this.noCategorySelected,
+    required this.noCategoryData,
     required this.noData,
     required this.chooseValidDate,
     required this.noActiveItems,
+    required this.noCategoriesYet,
+    required this.noCategoriesWithTasksAvailable,
+    required this.noItemsInCategory,
+    required this.addCategory,
+    required this.categoryName,
+    required this.categoryNameExists,
     required this.settings,
+    required this.language,
+    required this.englishLanguage,
+    required this.arabicLanguage,
     required this.userGuide,
     required this.userGuideSubtitle,
     required this.userGuideNotAvailable,
@@ -163,6 +199,12 @@ class AppStrings {
     required this.confirmImport,
     required this.importReplaceConfirmation,
     required this.continueAction,
+    required this.developerTools,
+    required this.clearLocalData,
+    required this.clearLocalDataDescription,
+    required this.clearLocalDataConfirmation,
+    required this.clearNow,
+    required this.localDataClearedRestartHint,
   });
 
   static const AppStrings ar = _appStringsAr;

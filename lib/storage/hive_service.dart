@@ -32,6 +32,7 @@ class HiveService {
   /// - `positiveTasksBox` -> positive tasks
   /// - `negativeHabitsBox` -> negative habits
   /// - `dayEntriesBox` -> one entry per normalized day key (`yyyy-MM-dd`)
+  /// - `appSettingsBox` -> lightweight app-level preferences
   static Future<void> init() async {
     if (_initialized) return;
 
@@ -39,6 +40,7 @@ class HiveService {
     await Hive.openBox(AppConstants.positiveTasksBox);
     await Hive.openBox(AppConstants.negativeHabitsBox);
     await Hive.openBox(AppConstants.dayEntriesBox);
+    await Hive.openBox(AppConstants.appSettingsBox);
 
     await _seedDefaultCategoriesIfNeeded();
     await _migrateDefaultCategoryNamesToArabic();
@@ -54,6 +56,8 @@ class HiveService {
       Hive.box(AppConstants.negativeHabitsBox);
   static Box<dynamic> get _dayEntriesBox =>
       Hive.box(AppConstants.dayEntriesBox);
+  static Box<dynamic> get _appSettingsBox =>
+      Hive.box(AppConstants.appSettingsBox);
 
   /// Returns all categories sorted by creation time.
   static List<AppCategory> loadAllCategories() {
@@ -166,6 +170,27 @@ class HiveService {
     await _positiveTasksBox.clear();
     await _negativeHabitsBox.clear();
     await _dayEntriesBox.clear();
+  }
+
+  /// Clears all app boxes including settings.
+  ///
+  /// Development-only helper used by explicit user action in debug mode.
+  static Future<void> clearAllDataIncludingSettings() async {
+    await clearAllData();
+    await _appSettingsBox.clear();
+  }
+
+  /// Loads the saved locale code (`en`/`ar`) or returns `en` by default.
+  static String loadSelectedLocaleCode() {
+    final raw = _appSettingsBox.get(AppConstants.selectedLocaleKey);
+    final code = raw is String ? raw : 'en';
+    return (code == 'ar' || code == 'en') ? code : 'en';
+  }
+
+  /// Persists the selected locale code.
+  static Future<void> saveSelectedLocaleCode(String localeCode) async {
+    final normalized = localeCode == 'ar' ? 'ar' : 'en';
+    await _appSettingsBox.put(AppConstants.selectedLocaleKey, normalized);
   }
 
   /// Seeds default categories only when category storage is empty.

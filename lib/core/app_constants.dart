@@ -7,4 +7,7 @@ class AppConstants {
   static const String positiveTasksBox = 'positiveTasksBox';
   static const String negativeHabitsBox = 'negativeHabitsBox';
   static const String dayEntriesBox = 'dayEntriesBox';
+  static const String appSettingsBox = 'appSettingsBox';
+
+  static const String selectedLocaleKey = 'selectedLocale';
 }

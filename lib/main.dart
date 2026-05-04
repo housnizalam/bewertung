@@ -7,6 +7,7 @@ import 'core/app_constants.dart';
 import 'core/app_theme.dart';
 import 'l10n/app_localizations.dart';
 import 'navigation/main_navigation.dart';
+import 'providers/locale_provider.dart';
 import 'storage/hive_service.dart';
 
 Future<void> main() async {
@@ -17,19 +18,19 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const defaultLocale = Locale('ar');
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedLocale = ref.watch(localeProvider);
 
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      locale: defaultLocale,
-      supportedLocales: const [Locale('ar'), Locale('en')],
+      locale: selectedLocale,
+      supportedLocales: const [Locale('en'), Locale('ar')],
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

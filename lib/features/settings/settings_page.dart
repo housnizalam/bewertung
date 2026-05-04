@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/categories_provider.dart';
 import '../../providers/day_entries_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/negative_habits_provider.dart';
 import '../../providers/positive_tasks_provider.dart';
 import '../../storage/backup_service.dart';
@@ -17,12 +18,24 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = context.strings;
+    final selectedLocale = ref.watch(localeProvider);
+    final selectedLanguageLabel = selectedLocale.languageCode == 'ar'
+        ? strings.arabicLanguage
+        : strings.englishLanguage;
 
     return Scaffold(
       appBar: AppBar(title: Text(strings.settings)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.language),
+              title: Text(strings.language),
+              subtitle: Text(selectedLanguageLabel),
+              onTap: () => _showLanguageDialog(context, ref, selectedLocale),
+            ),
+          ),
           Card(
             child: ListTile(
               leading: const Icon(Icons.download_rounded),
@@ -126,5 +139,53 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showLanguageDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Locale selectedLocale,
+  ) async {
+    final strings = context.strings;
+
+    final picked = await showDialog<Locale>(
+      context: context,
+      builder: (dialogContext) {
+        final selectedCode = selectedLocale.languageCode;
+        return AlertDialog(
+          title: Text(strings.language),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.language),
+                title: Text(strings.englishLanguage),
+                trailing: selectedCode == 'en' ? const Icon(Icons.check) : null,
+                onTap: () =>
+                    Navigator.of(dialogContext).pop(const Locale('en')),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.language),
+                title: Text(strings.arabicLanguage),
+                trailing: selectedCode == 'ar' ? const Icon(Icons.check) : null,
+                onTap: () =>
+                    Navigator.of(dialogContext).pop(const Locale('ar')),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(strings.cancel),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (picked == null) return;
+    await ref.read(localeProvider.notifier).setLocale(picked);
   }
 }

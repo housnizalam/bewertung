@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../models/daily_score.dart';
@@ -24,7 +25,6 @@ class CalendarPage extends ConsumerStatefulWidget {
 class _CalendarPageState extends ConsumerState<CalendarPage> {
   late DateTime _focusedDay;
   late DateTime _selectedDay;
-  DateTime? _pressedDay;
 
   @override
   void initState() {
@@ -38,6 +38,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final strings = context.strings;
     final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context);
+    final localeCode = locale.languageCode;
 
     // Watching entries means returning from DayDetailPage automatically
     // rebuilds markers and selected-day summary.
@@ -57,6 +59,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       _selectedDay,
       activeTasks,
       activeHabits,
+      locale,
     );
 
     return Scaffold(
@@ -67,127 +70,158 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: TableCalendar<void>(
-                firstDay: DateTime(2020, 1, 1),
-                lastDay: DateTime(2035, 12, 31),
-                focusedDay: _focusedDay,
-                locale: Localizations.localeOf(context).languageCode,
-                selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
-                onDaySelected: (selectedDay, focusedDay) async {
-                  final navigator = Navigator.of(context);
-                  final tapped = DateTime(
-                    selectedDay.year,
-                    selectedDay.month,
-                    selectedDay.day,
-                  );
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final rawButtonSize = (constraints.maxWidth / 7) - 8;
+                  final dayButtonSize = rawButtonSize.clamp(36.0, 44.0);
 
-                  setState(() {
-                    _pressedDay = tapped;
-                    _selectedDay = tapped;
-                    _focusedDay = focusedDay;
-                  });
+                  return TableCalendar<void>(
+                    firstDay: DateTime(2020, 1, 1),
+                    lastDay: DateTime(2035, 12, 31),
+                    focusedDay: _focusedDay,
+                    locale: localeCode,
+                    rowHeight: dayButtonSize + 4,
+                    daysOfWeekHeight: 34,
+                    selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
+                    onDaySelected: (selectedDay, focusedDay) async {
+                      final navigator = Navigator.of(context);
+                      final tapped = DateTime(
+                        selectedDay.year,
+                        selectedDay.month,
+                        selectedDay.day,
+                      );
+                      final canOpenDetails = !ref
+                          .read(dayEntriesProvider.notifier)
+                          .isFutureDate(tapped);
 
-                  // Short press animation before opening detail page.
-                  await Future<void>.delayed(const Duration(milliseconds: 95));
+                      setState(() {
+                        _selectedDay = tapped;
+                        _focusedDay = focusedDay;
+                      });
 
-                  if (!mounted) return;
-                  setState(() {
-                    _pressedDay = null;
-                  });
+                      if (!canOpenDetails) return;
 
-                  // Open detail page for the tapped day.
-                  await navigator.push(
-                    MaterialPageRoute(
-                      builder: (_) => DayDetailPage(selectedDate: _selectedDay),
+                      // Open detail page for the tapped day.
+                      await navigator.push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              DayDetailPage(selectedDate: _selectedDay),
+                        ),
+                      );
+                    },
+                    onPageChanged: (focusedDay) {
+                      setState(() {
+                        _focusedDay = focusedDay;
+                      });
+                    },
+                    daysOfWeekStyle: DaysOfWeekStyle(
+                      weekdayStyle:
+                          (theme.textTheme.bodySmall ?? const TextStyle())
+                              .copyWith(fontWeight: FontWeight.w600),
+                      weekendStyle:
+                          (theme.textTheme.bodySmall ?? const TextStyle())
+                              .copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    calendarStyle: CalendarStyle(
+                      outsideDaysVisible: true,
+                      cellMargin: EdgeInsets.zero,
+                      defaultDecoration: const BoxDecoration(
+                        color: Colors.transparent,
+                      ),
+                      selectedDecoration: BoxDecoration(
+                        color: Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                      todayDecoration: BoxDecoration(
+                        color: Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    calendarBuilders: CalendarBuilders(
+                      dowBuilder: (context, day) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Center(
+                            child: Text(
+                              DateFormat.E(localeCode).format(day),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      defaultBuilder: (context, day, focusedDay) {
+                        final score = dayEntriesNotifier.getScoreForDate(
+                          day,
+                          activeTasks,
+                          activeHabits,
+                          locale,
+                        );
+                        return _buildDayButton(
+                          context: context,
+                          day: day,
+                          isSelected: false,
+                          isToday: false,
+                          isOutside: false,
+                          ratingColor: _scoreColor(score),
+                          size: dayButtonSize,
+                        );
+                      },
+                      selectedBuilder: (context, day, focusedDay) {
+                        final score = dayEntriesNotifier.getScoreForDate(
+                          day,
+                          activeTasks,
+                          activeHabits,
+                          locale,
+                        );
+                        return _buildDayButton(
+                          context: context,
+                          day: day,
+                          isSelected: true,
+                          isToday: false,
+                          isOutside: false,
+                          ratingColor: _scoreColor(score),
+                          size: dayButtonSize,
+                        );
+                      },
+                      todayBuilder: (context, day, focusedDay) {
+                        final score = dayEntriesNotifier.getScoreForDate(
+                          day,
+                          activeTasks,
+                          activeHabits,
+                          locale,
+                        );
+                        return _buildDayButton(
+                          context: context,
+                          day: day,
+                          isSelected: false,
+                          isToday: true,
+                          isOutside: false,
+                          ratingColor: _scoreColor(score),
+                          size: dayButtonSize,
+                        );
+                      },
+                      outsideBuilder: (context, day, focusedDay) {
+                        final score = dayEntriesNotifier.getScoreForDate(
+                          day,
+                          activeTasks,
+                          activeHabits,
+                          locale,
+                        );
+                        return _buildDayButton(
+                          context: context,
+                          day: day,
+                          isSelected: false,
+                          isToday: false,
+                          isOutside: true,
+                          ratingColor: _scoreColor(score),
+                          size: dayButtonSize,
+                        );
+                      },
                     ),
                   );
                 },
-                onPageChanged: (focusedDay) {
-                  setState(() {
-                    _focusedDay = focusedDay;
-                  });
-                },
-                calendarStyle: CalendarStyle(
-                  outsideDaysVisible: true,
-                  cellMargin: const EdgeInsets.all(3),
-                  defaultDecoration: const BoxDecoration(
-                    color: Colors.transparent,
-                  ),
-                  selectedDecoration: BoxDecoration(
-                    color: Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                  todayDecoration: BoxDecoration(
-                    color: Colors.transparent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                calendarBuilders: CalendarBuilders(
-                  defaultBuilder: (context, day, focusedDay) {
-                    final score = dayEntriesNotifier.getScoreForDate(
-                      day,
-                      activeTasks,
-                      activeHabits,
-                    );
-                    return _buildDayButton(
-                      context: context,
-                      day: day,
-                      isSelected: false,
-                      isToday: false,
-                      isOutside: false,
-                      isPressed: isSameDay(_pressedDay, day),
-                      ratingColor: _scoreColor(score),
-                    );
-                  },
-                  selectedBuilder: (context, day, focusedDay) {
-                    final score = dayEntriesNotifier.getScoreForDate(
-                      day,
-                      activeTasks,
-                      activeHabits,
-                    );
-                    return _buildDayButton(
-                      context: context,
-                      day: day,
-                      isSelected: true,
-                      isToday: false,
-                      isOutside: false,
-                      isPressed: isSameDay(_pressedDay, day),
-                      ratingColor: _scoreColor(score),
-                    );
-                  },
-                  todayBuilder: (context, day, focusedDay) {
-                    final score = dayEntriesNotifier.getScoreForDate(
-                      day,
-                      activeTasks,
-                      activeHabits,
-                    );
-                    return _buildDayButton(
-                      context: context,
-                      day: day,
-                      isSelected: false,
-                      isToday: true,
-                      isOutside: false,
-                      isPressed: isSameDay(_pressedDay, day),
-                      ratingColor: _scoreColor(score),
-                    );
-                  },
-                  outsideBuilder: (context, day, focusedDay) {
-                    final score = dayEntriesNotifier.getScoreForDate(
-                      day,
-                      activeTasks,
-                      activeHabits,
-                    );
-                    return _buildDayButton(
-                      context: context,
-                      day: day,
-                      isSelected: false,
-                      isToday: false,
-                      isOutside: true,
-                      isPressed: isSameDay(_pressedDay, day),
-                      ratingColor: _scoreColor(score),
-                    );
-                  },
-                ),
               ),
             ),
           ),
@@ -225,6 +259,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     width: double.infinity,
                     child: Pressable3DButton(
                       onPressed: () async {
+                        if (ref
+                            .read(dayEntriesProvider.notifier)
+                            .isFutureDate(_selectedDay)) {
+                          return;
+                        }
                         await Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
@@ -275,8 +314,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     required bool isSelected,
     required bool isToday,
     required bool isOutside,
-    required bool isPressed,
     required Color? ratingColor,
+    required double size,
   }) {
     final theme = Theme.of(context);
 
@@ -308,17 +347,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       baseColor,
     );
 
-    final topOffset = isPressed ? 3.0 : 0.0;
-    final scale = isPressed ? 0.97 : 1.0;
-
     return Center(
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOut,
-        scale: scale,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
         child: SizedBox(
-          width: 44,
-          height: 44,
+          width: size,
+          height: size,
           child: Stack(
             children: [
               Positioned.fill(
@@ -343,10 +377,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   ),
                 ),
               ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 100),
-                curve: Curves.easeOut,
-                transform: Matrix4.translationValues(0, topOffset, 0),
+              DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(11),
                   gradient: LinearGradient(

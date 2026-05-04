@@ -44,8 +44,12 @@ const AppStrings _appStringsEn = AppStrings(
   dayEvaluation: 'Day Evaluation',
   saveEvaluation: 'Save Evaluation',
   savedSuccessfully: 'Saved',
-  completedCount: 'Completed',
-  actualCount: 'Actual',
+  completedCount: 'Completed count',
+  weeklyTaskProgressTemplate:
+      '{percent}% of this weekly task has been completed',
+  monthlyTaskProgressTemplate:
+      '{percent}% of this monthly task has been completed',
+  actualCount: 'Count',
   positivePoints: 'Positive Points',
   negativePoints: 'Negative Points',
   rawScore: 'Raw Score',
@@ -63,10 +67,23 @@ const AppStrings _appStringsEn = AppStrings(
   selectTasksAndForbidden: 'Select tasks and forbidden actions',
   dailyScores: 'Daily scores',
   selectedItems: 'Selected items',
+  categoryStatistics: 'Category statistics',
+  selectCategories: 'Select categories',
+  noCategorySelected: 'No category selected',
+  noCategoryData: 'No category data',
   noData: 'No data',
   chooseValidDate: 'Choose a valid date',
   noActiveItems: 'No active items',
+  noCategoriesYet: 'No categories yet',
+  noCategoriesWithTasksAvailable: 'No categories with tasks available',
+  noItemsInCategory: 'No items in this category',
+  addCategory: 'Add Category',
+  categoryName: 'Category name',
+  categoryNameExists: 'A category with this name already exists',
   settings: 'Settings',
+  language: 'Language',
+  englishLanguage: 'English',
+  arabicLanguage: 'Arabic',
   userGuide: 'User Guide',
   userGuideSubtitle: 'How to use the app',
   userGuideNotAvailable: 'Sorry, the app could not load the user guide',
@@ -83,4 +100,13 @@ const AppStrings _appStringsEn = AppStrings(
   importReplaceConfirmation:
       'Current app data will be replaced with the data from the backup file. Continue?',
   continueAction: 'Continue',
+  developerTools: 'Developer tools',
+  clearLocalData: 'Clear local data',
+  clearLocalDataDescription:
+      'Debug only: clear local Hive data used for testing on this device.',
+  clearLocalDataConfirmation:
+      'This will permanently delete local Hive data on this device (categories, tasks, habits, entries, and app settings). This action is intended for development only. Continue?',
+  clearNow: 'Clear now',
+  localDataClearedRestartHint:
+      'Local app data was cleared. Restart the app to reseed default categories.',
 );

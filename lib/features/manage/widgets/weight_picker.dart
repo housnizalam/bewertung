@@ -45,33 +45,36 @@ class _WeightPickerState extends State<WeightPicker> {
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.titleLarge;
 
-    return SizedBox(
-      height: 92,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _DigitWheel(
-            controller: _tensController,
-            selectedValue: _tens,
-            onChanged: (value) {
-              setState(() => _tens = value);
-              _notify();
-            },
-            textStyle: textStyle,
-          ),
-          const SizedBox(width: 10),
-          _DigitWheel(
-            controller: _onesController,
-            selectedValue: _ones,
-            onChanged: (value) {
-              setState(() => _ones = value);
-              _notify();
-            },
-            textStyle: textStyle,
-          ),
-          const SizedBox(width: 12),
-          Text('%', style: textStyle?.copyWith(fontWeight: FontWeight.w700)),
-        ],
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        height: 92,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _DigitWheel(
+              controller: _tensController,
+              selectedValue: _tens,
+              onChanged: (value) {
+                setState(() => _tens = value);
+                _notify();
+              },
+              textStyle: textStyle,
+            ),
+            const SizedBox(width: 10),
+            _DigitWheel(
+              controller: _onesController,
+              selectedValue: _ones,
+              onChanged: (value) {
+                setState(() => _ones = value);
+                _notify();
+              },
+              textStyle: textStyle,
+            ),
+            const SizedBox(width: 12),
+            Text('%', style: textStyle?.copyWith(fontWeight: FontWeight.w700)),
+          ],
+        ),
       ),
     );
   }

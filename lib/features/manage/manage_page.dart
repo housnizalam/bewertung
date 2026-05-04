@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/category_name_localizer.dart';
 import '../../l10n/app_localizations.dart';
 import '../day/day_detail_page.dart';
 import '../../models/app_category.dart';
@@ -101,6 +102,7 @@ class _ManagePageState extends ConsumerState<ManagePage>
                       categoryName: _localizedCategoryName(
                         context,
                         category?.name ?? strings.unknownCategory,
+                        isDefault: category?.isDefault ?? false,
                       ),
                       weight: task.weight,
                       targetCount: task.targetCount,
@@ -133,6 +135,7 @@ class _ManagePageState extends ConsumerState<ManagePage>
                       categoryName: _localizedCategoryName(
                         context,
                         category?.name ?? strings.unknownCategory,
+                        isDefault: category?.isDefault ?? false,
                       ),
                       weight: habit.weight,
                       targetCount: null,
@@ -150,6 +153,7 @@ class _ManagePageState extends ConsumerState<ManagePage>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'manage_add_fab',
         onPressed: () async {
           if (categories.isEmpty) {
             _showMessage(strings.missingCategories);
@@ -446,7 +450,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     final strings = context.strings;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final weightLabel = Localizations.localeOf(context).languageCode == 'ar'
-        ? 'التثقيل (%)'
+        ? 'الأهمية (%)'
         : 'Weight (%)';
 
     return Padding(
@@ -482,7 +486,11 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                       (category) => DropdownMenuItem(
                         value: category.id,
                         child: Text(
-                          _localizedCategoryName(context, category.name),
+                          _localizedCategoryName(
+                            context,
+                            category.name,
+                            isDefault: category.isDefault,
+                          ),
                         ),
                       ),
                     )
@@ -641,7 +649,7 @@ class _HabitFormSheetState extends State<_HabitFormSheet> {
     final strings = context.strings;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final weightLabel = Localizations.localeOf(context).languageCode == 'ar'
-        ? 'التثقيل (%)'
+        ? 'الأهمية (%)'
         : 'Weight (%)';
 
     return Padding(
@@ -677,7 +685,11 @@ class _HabitFormSheetState extends State<_HabitFormSheet> {
                       (category) => DropdownMenuItem(
                         value: category.id,
                         child: Text(
-                          _localizedCategoryName(context, category.name),
+                          _localizedCategoryName(
+                            context,
+                            category.name,
+                            isDefault: category.isDefault,
+                          ),
                         ),
                       ),
                     )
@@ -818,20 +830,10 @@ String _frequencyLabel(BuildContext context, FrequencyType type) {
   }
 }
 
-String _localizedCategoryName(BuildContext context, String name) {
-  final languageCode = Localizations.localeOf(context).languageCode;
-  if (languageCode != 'ar') return name;
-
-  const englishToArabicDefaults = <String, String>{
-    'Religion': 'ديني',
-    'Ethics': 'أخلاقي',
-    'Family': 'عائلة',
-    'Work': 'عمل',
-    'Health': 'صحة',
-    'Learning': 'تعلّم',
-    'Sport': 'رياضة',
-    'Other': 'أخرى',
-  };
-
-  return englishToArabicDefaults[name] ?? name;
+String _localizedCategoryName(
+  BuildContext context,
+  String name, {
+  required bool isDefault,
+}) {
+  return localizedCategoryName(context, name, isDefault: isDefault);
 }

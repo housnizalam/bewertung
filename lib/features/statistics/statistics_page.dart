@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/category_name_localizer.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/app_category.dart';
 import '../../models/negative_habit.dart';
 import '../../models/positive_task.dart';
+import '../../providers/categories_provider.dart';
 import '../../providers/day_entries_provider.dart';
 import '../../providers/negative_habits_provider.dart';
 import '../../providers/positive_tasks_provider.dart';
@@ -30,6 +33,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
 
   final Set<String> _selectedPositiveTaskIds = <String>{};
   final Set<String> _selectedNegativeHabitIds = <String>{};
+  final Set<String> _selectedCategoryIds = <String>{};
 
   @override
   void initState() {
@@ -45,6 +49,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
     final strings = context.strings;
     final dateFormat = DateFormat('yyyy-MM-dd');
     final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context);
 
     // Watch entries so charts refresh when data changes.
     ref.watch(dayEntriesProvider);
@@ -57,6 +62,14 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
     final activeHabits = ref
         .watch(negativeHabitsProvider)
         .where((habit) => habit.isActive)
+        .toList();
+    final categories = ref.watch(categoriesProvider);
+    final allPositiveTasks = ref.watch(positiveTasksProvider);
+    final validCategories = categories
+        .where(
+          (category) =>
+              allPositiveTasks.any((task) => task.categoryId == category.id),
+        )
         .toList();
 
     // Invalid ranges are handled in UI (message + empty charts).
@@ -71,10 +84,15 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
     final selectedHabits = activeHabits
         .where((habit) => _selectedNegativeHabitIds.contains(habit.id))
         .toList();
+    final selectedCategories = validCategories
+        .where((category) => _selectedCategoryIds.contains(category.id))
+        .toList();
 
-    // Used to avoid drawing charts when no persisted data exists.
+    // Include dynamically calculable days (no entry but applicable tasks exist).
     final hasAnyEntryInRange = days.any(
-      (day) => dayEntriesNotifier.getEntryForDate(day) != null,
+      (day) => dayEntriesNotifier
+          .getScoreForDate(day, activeTasks, activeHabits, locale)
+          .isRated,
     );
 
     final dailyScoreSeries = _buildDailyScoreSeries(
@@ -82,6 +100,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
       activeTasks: activeTasks,
       activeHabits: activeHabits,
       dayEntriesNotifier: dayEntriesNotifier,
+      locale: locale,
       label: strings.score,
     );
 
@@ -91,6 +110,28 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
       selectedHabits: selectedHabits,
       dayEntriesNotifier: dayEntriesNotifier,
     );
+
+    final categorySeries = _buildCategorySeries(
+      days: days,
+      selectedCategories: selectedCategories,
+      activeTasks: activeTasks,
+      activeHabits: activeHabits,
+      dayEntriesNotifier: dayEntriesNotifier,
+      locale: locale,
+    );
+
+    final hasAnyCategoryDataInRange = selectedCategories.any((category) {
+      return days.any((day) {
+        final score = dayEntriesNotifier.getScoreForDateByCategory(
+          day,
+          category.id,
+          activeTasks,
+          activeHabits,
+          locale,
+        );
+        return score.isRated;
+      });
+    });
 
     final selectionWidgets = <Widget>[
       Text(strings.selectTasksAndForbidden, style: theme.textTheme.titleMedium),
@@ -194,6 +235,15 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
             ),
           ),
           const SizedBox(height: 12),
+          _ChartCard(
+            title: strings.dailyScores,
+            noDataText: strings.noData,
+            hasValidRange: hasValidRange,
+            hasData: hasAnyEntryInRange,
+            series: dailyScoreSeries,
+            days: days,
+          ),
+          const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -205,20 +255,70 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
           ),
           const SizedBox(height: 12),
           _ChartCard(
-            title: strings.dailyScores,
-            noDataText: strings.noData,
-            hasValidRange: hasValidRange,
-            hasData: hasAnyEntryInRange,
-            series: dailyScoreSeries,
-            days: days,
-          ),
-          const SizedBox(height: 12),
-          _ChartCard(
             title: strings.selectedItems,
             noDataText: strings.noData,
             hasValidRange: hasValidRange,
             hasData: hasAnyEntryInRange && selectedItemSeries.isNotEmpty,
             series: selectedItemSeries,
+            days: days,
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    strings.selectCategories,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  if (validCategories.isEmpty)
+                    Text(strings.noCategoriesWithTasksAvailable)
+                  else
+                    ...validCategories.map(
+                      (category) => CheckboxListTile(
+                        value: _selectedCategoryIds.contains(category.id),
+                        onChanged: (value) {
+                          setState(() {
+                            if (value == true) {
+                              _selectedCategoryIds.add(category.id);
+                            } else {
+                              _selectedCategoryIds.remove(category.id);
+                            }
+                          });
+                        },
+                        title: Text(
+                          localizedCategoryName(
+                            context,
+                            category.name,
+                            isDefault: category.isDefault,
+                          ),
+                        ),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _ChartCard(
+            title: strings.categoryStatistics,
+            noDataText: validCategories.isEmpty
+                ? strings.noCategoriesWithTasksAvailable
+                : (selectedCategories.isEmpty
+                      ? strings.noCategorySelected
+                      : strings.noCategoryData),
+            hasValidRange: hasValidRange,
+            hasData:
+                validCategories.isNotEmpty &&
+                selectedCategories.isNotEmpty &&
+                hasAnyCategoryDataInRange,
+            series: categorySeries,
             days: days,
           ),
         ],
@@ -253,7 +353,12 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
   List<DateTime> _daysInRange(DateTime start, DateTime end) {
     final days = <DateTime>[];
     var cursor = DateTime(start.year, start.month, start.day);
-    final last = DateTime(end.year, end.month, end.day);
+    final today = DateTime.now();
+    final normalizedToday = DateTime(today.year, today.month, today.day);
+    final normalizedEnd = DateTime(end.year, end.month, end.day);
+    final last = normalizedEnd.isAfter(normalizedToday)
+        ? normalizedToday
+        : normalizedEnd;
 
     while (!cursor.isAfter(last)) {
       days.add(cursor);
@@ -272,6 +377,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
     required List<PositiveTask> activeTasks,
     required List<NegativeHabit> activeHabits,
     required DayEntriesNotifier dayEntriesNotifier,
+    required Locale locale,
     required String label,
   }) {
     final spots = <FlSpot>[];
@@ -281,6 +387,7 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
         day,
         activeTasks,
         activeHabits,
+        locale,
       );
       spots.add(FlSpot(i.toDouble(), score.rawScore));
     }
@@ -341,6 +448,59 @@ class _StatisticsPageState extends ConsumerState<StatisticsPage> {
       series.add(
         _ChartSeries(
           label: habit.name,
+          color: palette[colorIndex % palette.length],
+          spots: spots,
+        ),
+      );
+      colorIndex++;
+    }
+
+    return series;
+  }
+
+  /// Builds chart series for selected category daily net scores.
+  List<_ChartSeries> _buildCategorySeries({
+    required List<DateTime> days,
+    required List<AppCategory> selectedCategories,
+    required List<PositiveTask> activeTasks,
+    required List<NegativeHabit> activeHabits,
+    required DayEntriesNotifier dayEntriesNotifier,
+    required Locale locale,
+  }) {
+    const palette = <Color>[
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.red,
+      Colors.indigo,
+      Colors.cyan,
+      Colors.pink,
+    ];
+
+    final series = <_ChartSeries>[];
+    var colorIndex = 0;
+
+    for (final category in selectedCategories) {
+      final spots = <FlSpot>[];
+      for (var i = 0; i < days.length; i++) {
+        final score = dayEntriesNotifier.getScoreForDateByCategory(
+          days[i],
+          category.id,
+          activeTasks,
+          activeHabits,
+          locale,
+        );
+        spots.add(FlSpot(i.toDouble(), score.rawScore));
+      }
+
+      series.add(
+        _ChartSeries(
+          label: localizedCategoryName(
+            context,
+            category.name,
+            isDefault: category.isDefault,
+          ),
           color: palette[colorIndex % palette.length],
           spots: spots,
         ),
